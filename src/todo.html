@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Todo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #111;
+      color: #e0e0e0;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 14px;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 32px 16px;
+    }
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #888;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .add-form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .add-form input {
+      flex: 1;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 8px 12px;
+      outline: none;
+    }
+    .add-form input:focus { border-color: #555; }
+    .add-form button {
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #aaa;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 8px 14px;
+    }
+    .add-form button:hover { background: #2a2a2a; color: #e0e0e0; }
+    .task-list { list-style: none; }
+    .task {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .task:last-child { border-bottom: none; }
+    .task.done .task-text {
+      color: #444;
+      text-decoration: line-through;
+    }
+    .task-text { flex: 1; line-height: 1.4; }
+    .task-id { color: #444; font-size: 11px; flex-shrink: 0; }
+    .btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #555;
+      font-family: inherit;
+    }
+    .btn:hover { color: #aaa; background: #1e1e1e; }
+    .btn-complete:hover { color: #6a9f6a; }
+    .btn-delete:hover { color: #9f6a6a; }
+    .empty { color: #444; padding: 12px 0; }
+  </style>
+</head>
+<body>
+  <h1>Todo</h1>
+
+  <form class="add-form" method="POST" action="/tasks">
+    <input type="text" name="text" placeholder="New task…" autocomplete="off" autofocus>
+    <button type="submit">Add</button>
+  </form>
+
+  <ul class="task-list" id="tasks"></ul>
+
+  <script>
+    const tasks = __TASKS_JSON__;
+
+    function render() {
+      const list = document.getElementById('tasks');
+      if (!tasks.length) {
+        list.innerHTML = '<li class="empty">No tasks.</li>';
+        return;
+      }
+      list.innerHTML = tasks.map(t => `
+        <li class="task${t.done ? ' done' : ''}">
+          <span class="task-id">#${t.id}</span>
+          <span class="task-text">${escape(t.text)}</span>
+          ${!t.done ? `
+            <form method="POST" action="/tasks/${t.id}/complete">
+              <input type="hidden" name="_method" value="PATCH">
+              <button class="btn btn-complete" type="submit">✓</button>
+            </form>` : ''}
+          <form method="POST" action="/tasks/${t.id}" id="del-${t.id}">
+            <input type="hidden" name="_method" value="DELETE">
+            <button class="btn btn-delete" type="submit">✕</button>
+          </form>
+        </li>`).join('');
+
+      // Wire up method-override forms to fetch DELETE/PATCH
+      list.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', async e => {
+          e.preventDefault();
+          const method = form.querySelector('[name=_method]')?.value || 'POST';
+          await fetch(form.action, { method, redirect: 'follow' });
+          location.reload();
+        });
+      });
+    }
+
+    function escape(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    render();
+  </script>
+</body>
+</html>
